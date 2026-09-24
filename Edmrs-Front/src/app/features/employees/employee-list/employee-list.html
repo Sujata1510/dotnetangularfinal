@@ -1,0 +1,48 @@
+<div class="employee-page">
+  <div class="header">
+    <h2>Employee Directory</h2>
+  </div>
+
+  <div class="filter-bar">
+    <input
+      type="text"
+      placeholder="Search by name or email..."
+      [(ngModel)]="searchTerm"
+      (keyup.enter)="onSearch()"
+    />
+
+    <select [(ngModel)]="selectedDepartmentId" (change)="onSearch()">
+      <option [ngValue]="undefined">All Departments</option>
+      @for (dept of departments(); track dept.id) {
+        <option [value]="dept.id">{{ dept.name }}</option>
+      }
+    </select>
+
+    <button (click)="onSearch()">Filter</button>
+  </div>
+
+  @if (isLoading()) {
+    <p>Loading employees...</p>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Department</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (emp of employees(); track emp.id) {
+          <tr>
+            <td>{{ emp.firstName }} {{ emp.lastName }}</td>
+            <td>{{ emp.email }}</td>
+            <td>{{ emp.departmentName || 'N/A' }}</td>
+            <td>{{ emp.status }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

@@ -1,0 +1,39 @@
+.dashboard-page {
+  .welcome-banner {
+    margin-bottom: 2rem;
+    h1 { margin: 0; color: #0f172a; font-size: 1.8rem; }
+    .subtext { color: #64748b; font-size: 0.95rem; }
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+
+    .metric-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+
+      .icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+      }
+
+      .info {
+        h3 { margin: 0; font-size: 1.5rem; color: #0f172a; }
+        p { margin: 0.1rem 0; color: #64748b; font-size: 0.875rem; }
+        .trend { font-size: 0.75rem; color: #16a34a; font-weight: 600; }
+      }
+    }
+  }
+}

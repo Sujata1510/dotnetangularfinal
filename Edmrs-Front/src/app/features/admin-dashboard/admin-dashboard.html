@@ -1,0 +1,20 @@
+ <div class="dashboard-container admin-theme">
+      <header class="dashboard-header">
+        <h1>Admin Control Center</h1>
+        <div class="user-info">
+          <span>Welcome, <strong>{{ authService.currentUser()?.fullName }}</strong> (System Admin)</span>
+          <button (click)="authService.logout()" class="btn-logout">Logout</button>
+        </div>
+      </header>
+
+      <section class="metrics-grid">
+        <div class="card"><h3>System Users</h3><p class="stat">1,240</p></div>
+        <div class="card"><h3>Active Projects</h3><p class="stat">85</p></div>
+        <div class="card"><h3>Data Quality Alerts</h3><p class="stat warning">12</p></div>
+      </section>
+
+      <section class="admin-actions">
+        <h2>Administrative Tasks</h2>
+        <p>Full privileges granted: User Management, Master Data Configuration, Data Quality Rule Execution.</p>
+      </section>
+    </div>

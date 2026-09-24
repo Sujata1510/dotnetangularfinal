@@ -1,0 +1,143 @@
+<!-- <div class="dashboard-container">
+  <!-- Header 
+  <header class="dashboard-header">
+    <div>
+      <h1>Viewer Information Portal</h1>
+      <p>Welcome, {{ authService.currentUser()?.fullName }}. Browse active updates and official reports.</p>
+    </div>
+    <button class="btn btn-refresh" (click)="loadDashboardData()">
+      ↻ Refresh
+    </button>
+  </header>
+
+   Metric Overview Cards 
+  <div class="metrics-grid">
+    <div class="card metric-card blue">
+      <div class="metric-value">{{ metrics().totalReports }}</div>
+      <div class="metric-label">Published Reports</div>
+    </div>
+    <div class="card metric-card teal">
+      <div class="metric-value">{{ metrics().activeProjects }}</div>
+      <div class="metric-label">Active Initiatives</div>
+    </div>
+    <div class="card metric-card purple">
+      <div class="metric-value">{{ metrics().recentAnnouncements }}</div>
+      <div class="metric-label">Announcements</div>
+    </div>
+    <div class="card metric-card green">
+      <div class="metric-value text-status">{{ metrics().systemStatus }}</div>
+      <div class="metric-label">System Health</div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid 
+  <div class="content-grid">
+    <!-- System Announcements Feed 
+    <div class="card announcements-section">
+      <h3>System Announcements</h3>
+      <div class="announcement-list">
+        @for (item of announcements(); track item.id) {
+          <div class="announcement-item">
+            <div class="announcement-header">
+              <span [class]="'badge badge-' + item.category.toLowerCase()">{{ item.category }}</span>
+              <span class="announcement-date">{{ item.publishedDate | date:'mediumDate' }}</span>
+            </div>
+            <h4>{{ item.title }}</h4>
+            <p>{{ item.content }}</p>
+            <div class="announcement-author">By {{ item.author }}</div>
+          </div>
+        } @empty {
+          <div class="empty-state">No active announcements.</div>
+        }
+      </div>
+    </div>
+
+    <!-- Read-Only Shared Reports Table 
+    <div class="card reports-section">
+      <div class="table-toolbar">
+        <h3>Available Documents & Reports</h3>
+        <input 
+          type="text" 
+          class="search-input" 
+          placeholder="Filter reports by name or department..." 
+          [ngModel]="searchTerm()" 
+          (ngModelChange)="searchTerm.set($event)"
+        />
+      </div>
+
+      @if (isLoading()) {
+        <div class="loading-spinner">Loading reports...</div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Document Name</th>
+              <th>Department</th>
+              <th>Last Updated</th>
+              <th>Size</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (report of filteredReports(); track report.id) {
+              <tr>
+                <td class="font-bold">{{ report.title }}</td>
+                <td><span class="badge badge-dept">{{ report.department }}</span></td>
+                <td>{{ report.updatedAt | date:'mediumDate' }}</td>
+                <td>{{ report.fileSize }}</td>
+                <td>
+                  <button class="btn btn-sm btn-outline" (click)="downloadReport(report)">
+                    📄 View
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="text-center empty-state">No documents match your filter.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+</div>
+<div class="dashboard-container viewer-theme">
+      <header class="dashboard-header">
+        <h1>Read-Only Reporting Dashboard</h1>
+        <div class="user-info">
+          <span>Welcome, <strong>{{ authService.currentUser()?.fullName }}</strong> (Viewer)</span>
+          <button (click)="authService.logout()" class="btn-logout">Logout</button>
+        </div>
+      </header>
+
+      <section class="metrics-grid">
+        <div class="card"><h3>Public Analytics</h3><p class="stat">Active</p></div>
+        <div class="card"><h3>Published Reports</h3><p class="stat">28</p></div>
+      </section>
+
+      <section class="viewer-actions">
+        <h2>Reporting Center</h2>
+        <p>Privileges granted: Read-only access to published reports and general project statistics.</p>
+      </section>
+    </div> -->
+
+    <div class="dashboard-container viewer-theme">
+      <header class="dashboard-header">
+        <h1>Read-Only Reporting Dashboard</h1>
+        <div class="user-info">
+          <span>Welcome, <strong>{{ authService.currentUser()?.fullName }}</strong> (Viewer)</span>
+          <button (click)="authService.logout()" class="btn-logout">Logout</button>
+        </div>
+      </header>
+
+      <section class="metrics-grid">
+        <div class="card"><h3>Public Analytics</h3><p class="stat">Active</p></div>
+        <div class="card"><h3>Published Reports</h3><p class="stat">28</p></div>
+      </section>
+
+      <section class="viewer-actions">
+        <h2>Reporting Center</h2>
+        <p>Privileges granted: Read-only access to published reports and general project statistics.</p>
+      </section>
+    </div>

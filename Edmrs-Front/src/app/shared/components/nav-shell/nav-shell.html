@@ -1,0 +1,53 @@
+<div class="shell-container" [class.collapsed]="isSidebarCollapsed()">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <span class="logo">⚡</span>
+        @if (!isSidebarCollapsed()) {
+          <span class="title">EDMRS Enterprise</span>
+        }
+      </div>
+      <button class="toggle-btn" (click)="toggleSidebar()">☰</button>
+    </div>
+
+    <ul class="nav-menu">
+      <li>
+        <a routerLink="/dashboard" routerLinkActive="active">
+          <span class="icon">📊</span>
+          @if (!isSidebarCollapsed()) { <span class="label">Dashboard</span> }
+        </a>
+      </li>
+
+      @if (authService.isManager()) {
+        <li>
+          <a routerLink="/employees" routerLinkActive="active">
+            <span class="icon">👥</span>
+            @if (!isSidebarCollapsed()) { <span class="label">Employees</span> }
+          </a>
+        </li>
+      }
+    </ul>
+
+    <div class="sidebar-footer">
+      @if (authService.currentUser(); as user) {
+        <div class="user-info">
+          <div class="avatar">{{ user.fullName ? user.fullName.charAt(0) : 'U' }}</div>
+          @if (!isSidebarCollapsed()) {
+            <div class="details">
+              <span class="name">{{ user.fullName }}</span>
+              <span class="roles">{{ user.roles.join(', ') }}</span>
+            </div>
+          }
+        </div>
+      }
+      <button class="logout-btn" (click)="onLogout()" title="Logout">
+        <span class="icon">🚪</span>
+        @if (!isSidebarCollapsed()) { <span class="label">Logout</span> }
+      </button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

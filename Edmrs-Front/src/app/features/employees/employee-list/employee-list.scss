@@ -1,0 +1,32 @@
+.employees-page {
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    h2 { margin: 0; color: #0f172a; }
+    .btn-add { background: #0284c7; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+
+    th, td { padding: 1rem; text-align: left; font-size: 0.9rem; }
+    th { background: #f8fafc; color: #475569; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+    td { border-bottom: 1px solid #f1f5f9; }
+
+    .status {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      &.active { background: #dcfce7; color: #15803d; }
+      &.inactive { background: #fee2e2; color: #b91c1c; }
+    }
+  }
+}
