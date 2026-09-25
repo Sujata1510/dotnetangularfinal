@@ -30,10 +30,12 @@ namespace EDMRS_Project.Data
             modelBuilder.Entity<Employee>().HasIndex(e => e.EmployeeCode).IsUnique();
             modelBuilder.Entity<Employee>().HasIndex(e => e.Email).IsUnique();
             modelBuilder.Entity<Project>().HasIndex(p => p.ProjectCode).IsUnique();
+            modelBuilder.Entity<Project>().Property(p => p.Budget).HasPrecision(18, 2);
 
             // Unique Assignment per Employee-Project pair
             modelBuilder.Entity<EmployeeProject>()
                 .HasKey(ep => new { ep.EmployeeID, ep.ProjectID });
+            modelBuilder.Entity<EmployeeProject>().Property(ep => ep.AllocationPercentage).HasPrecision(18, 2);
         }
     }
 }

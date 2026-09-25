@@ -1,20 +1,476 @@
- <div class="dashboard-container admin-theme">
-      <header class="dashboard-header">
-        <h1>Admin Control Center</h1>
-        <div class="user-info">
-          <span>Welcome, <strong>{{ authService.currentUser()?.fullName }}</strong> (System Admin)</span>
-          <button (click)="authService.logout()" class="btn-logout">Logout</button>
-        </div>
-      </header>
+<div class="admin-shell">
+  <aside class="sidebar">
+    <div class="brand">{{ canChange() ? 'ADMIN' : 'VIEWER' }}</div>
+    <nav>
+      @for (item of menu(); track item.id; let i = $index) {
+        @if (item.group && (i === 0 || menu()[i - 1].group !== item.group)) {
+          <div class="nav-group">{{ item.group }}</div>
+        }
+        <button type="button" [class.active]="view() === item.id" [class.sub]="!!item.group" (click)="open(item.id)">
+          {{ item.label }}
+        </button>
+      }
+    </nav>
+    <button type="button" class="logout" (click)="auth.logout()">Logout</button>
+  </aside>
 
-      <section class="metrics-grid">
-        <div class="card"><h3>System Users</h3><p class="stat">1,240</p></div>
-        <div class="card"><h3>Active Projects</h3><p class="stat">85</p></div>
-        <div class="card"><h3>Data Quality Alerts</h3><p class="stat warning">12</p></div>
-      </section>
+  <section class="content">
+    <header class="page-bar">{{ pageTitle() }}</header>
+    <div class="page-body">
+      @if (error()) {
+        <p class="banner error">{{ error() }}</p>
+      }
+      @if (notice()) {
+        <p class="banner ok">{{ notice() }}</p>
+      }
 
-      <section class="admin-actions">
-        <h2>Administrative Tasks</h2>
-        <p>Full privileges granted: User Management, Master Data Configuration, Data Quality Rule Execution.</p>
-      </section>
+      @switch (view()) {
+        @case ('dashboard') {
+          <section class="panel">
+            <h2>{{ canChange() ? 'Welcome Back, Admin' : 'Welcome, Viewer' }}</h2>
+            <p class="meta">Quick look at your system after login.</p>
+            <div class="stat-grid">
+              <button type="button" class="stat" (click)="open('projects')">
+                <strong>{{ projects().length }}</strong>
+                <span>Projects</span>
+              </button>
+              <button type="button" class="stat" (click)="open('employees')">
+                <strong>{{ employees().length }}</strong>
+                <span>Employees</span>
+              </button>
+              <button type="button" class="stat" (click)="open('reports')">
+                <strong>{{ warnCountProjects() + warnCountEmployees() }}</strong>
+                <span>Format warnings</span>
+              </button>
+            </div>
+            <!-- <div class="flow-list">
+              <p><strong>1.</strong> Manage Projects — add, edit, delete, assign people, change status</p>
+              <p><strong>2.</strong> Employee list — see people and format warnings</p>
+              <p><strong>3.</strong> Manage Users — add, edit, turn off, give role</p>
+              <p><strong>4.</strong> Reports — counts and format warnings</p>
+            </div> -->
+          </section>
+        }
+
+        @case ('projects') {
+          <section class="panel">
+            <h2>Manage Projects</h2>
+            <p class="meta">Edit name, due date, or status. Delete removes the project and clears people on it.</p>
+            @if (loading()) {
+              <p class="meta">Loading projects...</p>
+            } @else if (projects().length === 0) {
+              <p class="meta">No projects yet. Use Add project.</p>
+            } @else {
+              <table>
+                <thead>
+                  <tr>
+                    <th>Project</th>
+                    <th>Due date</th>
+                    <th>Status</th>
+                    <th>Warnings</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (project of projects(); track project.projectID) {
+                    <tr [class.flagged]="projectWarnings(project)">
+                      @if (editingId() === project.projectID) {
+                        <td><input [(ngModel)]="project.projectName" [name]="'name' + project.projectID" /></td>
+                        <td>
+                          <input
+                            type="date"
+                            [ngModel]="dateOnly(project.endDate)"
+                            (ngModelChange)="project.endDate = $event || null"
+                            [name]="'due' + project.projectID"
+                          />
+                        </td>
+                        <td>
+                          <select [(ngModel)]="project.status" [name]="'status' + project.projectID">
+                            @for (status of statuses; track status) {
+                              <option [ngValue]="status">{{ status }}</option>
+                            }
+                          </select>
+                        </td>
+                        <td></td>
+                    <td class="actions">
+                      @if (canChange()) {
+                        <button type="button" class="edit" (click)="saveProject(project)" [disabled]="saving()">Save</button>
+                        <button type="button" class="ghost" (click)="cancelEdit()">Cancel</button>
+                      }
+                    </td>
+                      } @else {
+                        <td>{{ project.projectName }}</td>
+                        <td>{{ project.endDate ? (project.endDate | date: 'mediumDate') : '—' }}</td>
+                        <td>{{ project.status }}</td>
+                        <td>
+                          @if (projectWarnings(project)) {
+                            <span class="warn">{{ projectWarnings(project) }}</span>
+                          }
+                        </td>
+                    <td class="actions">
+                      @if (canChange()) {
+                        <button type="button" class="edit" (click)="startEdit(project)">Edit / Change status</button>
+                        <button type="button" class="danger" (click)="deleteProject(project)" [disabled]="saving()">Delete</button>
+                      }
+                    </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+        }
+
+        @case ('add-project') {
+          <section class="panel">
+            <h2>Add project</h2>
+            <form (ngSubmit)="saveNewProject()" class="grid">
+              <label>Code
+                <input [ngModel]="projectDraft().projectCode" (ngModelChange)="setProject('projectCode', $event)" name="projectCode" placeholder="PRJ001" />
+                @if (projectFieldWarnings().projectCode) { <span class="warn">{{ projectFieldWarnings().projectCode }}</span> }
+              </label>
+              <label>Name
+                <input [ngModel]="projectDraft().projectName" (ngModelChange)="setProject('projectName', $event)" name="projectName" />
+                @if (projectFieldWarnings().projectName) { <span class="warn">{{ projectFieldWarnings().projectName }}</span> }
+              </label>
+              <label>Client
+                <select [ngModel]="projectDraft().clientID" (ngModelChange)="setProject('clientID', +$event)" name="clientID">
+                  <option [ngValue]="0">Select</option>
+                  @for (row of clients(); track row.id) {
+                    <option [ngValue]="row.id">{{ row.name }}</option>
+                  }
+                </select>
+                @if (projectFieldWarnings().clientID) { <span class="warn">{{ projectFieldWarnings().clientID }}</span> }
+              </label>
+              <label>Department
+                <select [ngModel]="projectDraft().departmentID" (ngModelChange)="setProject('departmentID', +$event)" name="departmentID">
+                  <option [ngValue]="0">Select</option>
+                  @for (row of departments(); track row.id) {
+                    <option [ngValue]="row.id">{{ row.name }}</option>
+                  }
+                </select>
+                @if (projectFieldWarnings().departmentID) { <span class="warn">{{ projectFieldWarnings().departmentID }}</span> }
+              </label>
+              <label>Start date
+                <input type="date" [ngModel]="projectDraft().startDate" (ngModelChange)="setProject('startDate', $event)" name="startDate" />
+              </label>
+              <label>Due date
+                <input type="date" [ngModel]="projectDraft().endDate" (ngModelChange)="setProject('endDate', $event)" name="endDate" [min]="projectDraft().startDate" />
+                @if (projectFieldWarnings().endDate) { <span class="warn">{{ projectFieldWarnings().endDate }}</span> }
+              </label>
+              <label>Budget
+                <input type="number" [ngModel]="projectDraft().budget" (ngModelChange)="setProject('budget', +$event)" name="budget" min="0" />
+                @if (projectFieldWarnings().budget) { <span class="warn">{{ projectFieldWarnings().budget }}</span> }
+              </label>
+              <label>Status
+                <select [ngModel]="projectDraft().status" (ngModelChange)="setProject('status', $event)" name="status">
+                  @for (status of statuses; track status) {
+                    <option [ngValue]="status">{{ status }}</option>
+                  }
+                </select>
+              </label>
+              <button type="submit" [disabled]="saving()">{{ saving() ? 'Saving...' : 'Save project' }}</button>
+            </form>
+          </section>
+        }
+
+        @case ('assign') {
+          <section class="panel">
+            <h2>Assign Employee</h2>
+            <p class="meta">Put a person on a project. Work share cannot go over 100% for the same dates.</p>
+            <form (ngSubmit)="saveAssignment()" class="grid">
+              <label>Person
+                <select [ngModel]="assignDraft().employeeID" (ngModelChange)="setAssign('employeeID', +$event)" name="employeeID">
+                  <option [ngValue]="0">Select</option>
+                  @for (person of employees(); track person.employeeID) {
+                    <option [ngValue]="person.employeeID">{{ person.fullName }} ({{ person.employeeCode }})</option>
+                  }
+                </select>
+                @if (assignFieldWarnings().employeeID) { <span class="warn">{{ assignFieldWarnings().employeeID }}</span> }
+              </label>
+              <label>Project
+                <select [ngModel]="assignDraft().projectID" (ngModelChange)="setAssign('projectID', +$event)" name="projectID">
+                  <option [ngValue]="0">Select</option>
+                  @for (project of projects(); track project.projectID) {
+                    <option [ngValue]="project.projectID">{{ project.projectCode }} — {{ project.projectName }}</option>
+                  }
+                </select>
+                @if (assignFieldWarnings().projectID) { <span class="warn">{{ assignFieldWarnings().projectID }}</span> }
+              </label>
+              <label>Job on project
+                <input [ngModel]="assignDraft().role" (ngModelChange)="setAssign('role', $event)" name="role" />
+                @if (assignFieldWarnings().role) { <span class="warn">{{ assignFieldWarnings().role }}</span> }
+              </label>
+              <label>Work share %
+                <input type="number" [ngModel]="assignDraft().allocationPercentage" (ngModelChange)="setAssign('allocationPercentage', +$event)" name="allocationPercentage" min="1" [max]="freeShare()" />
+                @if (assignFieldWarnings().allocationPercentage) { <span class="warn">{{ assignFieldWarnings().allocationPercentage }}</span> }
+              </label>
+              <label>Start
+                <input type="date" [ngModel]="assignDraft().startDate" (ngModelChange)="setAssign('startDate', $event)" name="assignStart" [min]="today" />
+                @if (assignFieldWarnings().startDate) { <span class="warn">{{ assignFieldWarnings().startDate }}</span> }
+              </label>
+              <label>End
+                <input type="date" [ngModel]="assignDraft().endDate" (ngModelChange)="setAssign('endDate', $event)" name="assignEnd" [min]="assignDraft().startDate || today" />
+                @if (assignFieldWarnings().endDate) { <span class="warn">{{ assignFieldWarnings().endDate }}</span> }
+              </label>
+              <button type="submit" [disabled]="saving() || freeShare() < 1 || assignDraft().allocationPercentage > freeShare()">
+                Assign
+              </button>
+            </form>
+            @if (assignDraft().employeeID) {
+              <p class="hint">
+                Free right now for these dates: {{ freeShare() }}%.
+                @if (freeShare() <= 0) {
+                  This person is fully booked until {{ freeOn(assignDraft().employeeID) || 'a project ends' }}.
+                }
+              </p>
+            }
+          </section>
+        }
+
+        @case ('users') {
+          <section class="panel">
+            <h2>User list</h2>
+            @if (users().length === 0) {
+              <p class="meta">No users yet. Use Add user.</p>
+            } @else {
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (user of users(); track user.id) {
+                    <tr>
+                      <td>{{ user.fullName }}</td>
+                      <td>{{ user.email }}</td>
+                      <td>{{ user.role }}</td>
+                      <td class="actions">
+                        @if (canChange()) {
+                          <button type="button" class="danger" (click)="deleteUser(user)" [disabled]="saving()">Delete</button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+        }
+
+        @case ('add-user') {
+          <section class="panel">
+            <h2>Add user</h2>
+            <form (ngSubmit)="saveNewUser()" class="grid">
+              <label>Full name
+                <input [ngModel]="userDraft().fullName" (ngModelChange)="setUser('fullName', $event)" name="fullName" />
+                @if (userFieldWarnings().fullName) { <span class="warn">{{ userFieldWarnings().fullName }}</span> }
+              </label>
+              <label>Email
+                <input type="email" [ngModel]="userDraft().email" (ngModelChange)="setUser('email', $event)" name="userEmail" />
+                @if (userFieldWarnings().email) { <span class="warn">{{ userFieldWarnings().email }}</span> }
+              </label>
+              <label>Password
+                <input type="password" [ngModel]="userDraft().password" (ngModelChange)="setUser('password', $event)" name="password" />
+                @if (userFieldWarnings().password) { <span class="warn">{{ userFieldWarnings().password }}</span> }
+              </label>
+              <label>Role
+                <select [ngModel]="userDraft().role" (ngModelChange)="setUser('role', $event)" name="role">
+                  @for (role of roles; track role) {
+                    <option [ngValue]="role">{{ role }}</option>
+                  }
+                </select>
+              </label>
+              <button type="submit" [disabled]="saving()">{{ saving() ? 'Saving...' : 'Save user' }}</button>
+            </form>
+          </section>
+        }
+
+        @case ('add-employee') {
+          <section class="panel">
+            <h2>Add employee</h2>
+            <form (ngSubmit)="saveEmployee()" class="grid">
+              <label>Code
+                <input [ngModel]="employeeDraft().employeeCode" (ngModelChange)="setEmployee('employeeCode', $event)" name="employeeCode" placeholder="EMP001" />
+                @if (employeeFieldWarnings().employeeCode) { <span class="warn">{{ employeeFieldWarnings().employeeCode }}</span> }
+              </label>
+              <label>First name
+                <input [ngModel]="employeeDraft().firstName" (ngModelChange)="setEmployee('firstName', $event)" name="firstName" />
+                @if (employeeFieldWarnings().firstName) { <span class="warn">{{ employeeFieldWarnings().firstName }}</span> }
+              </label>
+              <label>Last name
+                <input [ngModel]="employeeDraft().lastName" (ngModelChange)="setEmployee('lastName', $event)" name="lastName" />
+                @if (employeeFieldWarnings().lastName) { <span class="warn">{{ employeeFieldWarnings().lastName }}</span> }
+              </label>
+              <label>Email
+                <input type="email" [ngModel]="employeeDraft().email" (ngModelChange)="setEmployee('email', $event)" name="employeeEmail" />
+                @if (employeeFieldWarnings().email) { <span class="warn">{{ employeeFieldWarnings().email }}</span> }
+              </label>
+              <label>Phone
+                <input [ngModel]="employeeDraft().phone" (ngModelChange)="setEmployee('phone', $event)" name="phone" />
+                @if (employeeFieldWarnings().phone) { <span class="warn">{{ employeeFieldWarnings().phone }}</span> }
+              </label>
+              <label>Hire date
+                <input type="date" [ngModel]="employeeDraft().hireDate" (ngModelChange)="setEmployee('hireDate', $event)" name="hireDate" [max]="today" />
+                @if (employeeFieldWarnings().hireDate) { <span class="warn">{{ employeeFieldWarnings().hireDate }}</span> }
+              </label>
+              <label>Salary
+                <input type="number" [ngModel]="employeeDraft().salary" (ngModelChange)="setEmployee('salary', +$event)" name="salary" />
+                @if (employeeFieldWarnings().salary) { <span class="warn">{{ employeeFieldWarnings().salary }}</span> }
+              </label>
+              <label>Department
+                <select [ngModel]="employeeDraft().departmentID" (ngModelChange)="setEmployee('departmentID', +$event)" name="departmentID">
+                  <option [ngValue]="0">Select</option>
+                  @for (row of departments(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }
+                </select>
+                @if (employeeFieldWarnings().departmentID) { <span class="warn">{{ employeeFieldWarnings().departmentID }}</span> }
+              </label>
+              <label>Position
+                <select [ngModel]="employeeDraft().positionID" (ngModelChange)="setEmployee('positionID', +$event)" name="positionID">
+                  <option [ngValue]="0">Select</option>
+                  @for (row of positions(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }
+                </select>
+                @if (employeeFieldWarnings().positionID) { <span class="warn">{{ employeeFieldWarnings().positionID }}</span> }
+              </label>
+              <label>Location
+                <select [ngModel]="employeeDraft().locationID" (ngModelChange)="setEmployee('locationID', +$event)" name="locationID">
+                  <option [ngValue]="0">Select</option>
+                  @for (row of locations(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }
+                </select>
+                @if (employeeFieldWarnings().locationID) { <span class="warn">{{ employeeFieldWarnings().locationID }}</span> }
+              </label>
+              <button type="submit" [disabled]="saving()">{{ saving() ? 'Saving...' : 'Save employee' }}</button>
+            </form>
+          </section>
+        }
+
+        @case ('employees') {
+          <section class="panel">
+            <h2>Employee list</h2>
+            <p class="meta">A warning appears when a code, email, or phone is not in the right format.</p>
+            @if (employees().length === 0) {
+              <p class="meta">No employees were returned from the database.</p>
+            } @else {
+              <table>
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Code</th>
+                    <th>Department</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Warnings</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (person of employees(); track person.employeeID) {
+                    <tr [class.flagged]="employeeWarnings(person)">
+                      <td>{{ person.fullName }}</td>
+                      <td>{{ person.employeeCode }}</td>
+                      <td>{{ person.departmentName }}</td>
+                      <td>{{ person.email }}</td>
+                      <td>{{ person.phone || '—' }}</td>
+                      <td>
+                        @if (employeeWarnings(person)) {
+                          <span class="warn">{{ employeeWarnings(person) }}</span>
+                        }
+                      </td>
+                      <td class="actions">
+                        @if (canChange()) {
+                          <button type="button" class="danger" (click)="deleteEmployee(person)" [disabled]="saving()">Delete</button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+        }
+
+        @case ('reports') {
+          <section class="panel">
+            <h2>Reports</h2>
+            <table>
+              <tbody>
+                <tr><th>Projects</th><td>{{ projects().length }}</td></tr>
+                <tr><th>People</th><td>{{ employees().length }}</td></tr>
+                <tr><th>Project links</th><td>{{ assignments().length }}</td></tr>
+                <tr><th>Projects with bad format</th><td>{{ warnCountProjects() }}</td></tr>
+                <tr><th>People with bad format</th><td>{{ warnCountEmployees() }}</td></tr>
+              </tbody>
+            </table>
+
+            <h2>People with format warnings</h2>
+            @if (warnCountEmployees() === 0) {
+              <p class="meta">All people look fine.</p>
+            } @else {
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Code</th>
+                    <th>Email</th>
+                    <th>Warnings</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (person of employees(); track person.employeeID) {
+                    @if (employeeWarnings(person)) {
+                      <tr class="flagged">
+                        <td>{{ person.fullName }}</td>
+                        <td>{{ person.employeeCode }}</td>
+                        <td>{{ person.email }}</td>
+                        <td><span class="warn">{{ employeeWarnings(person) }}</span></td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            }
+
+            <h2>Projects with format warnings</h2>
+            @if (warnCountProjects() === 0) {
+              <p class="meta">All projects look fine.</p>
+            } @else {
+              <table>
+                <thead>
+                  <tr>
+                    <th>Project</th>
+                    <th>Code</th>
+                    <th>Warnings</th>
+                    @if (canChange()) {
+                      <th></th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (project of projects(); track project.projectID) {
+                    @if (projectWarnings(project)) {
+                      <tr class="flagged">
+                        <td>{{ project.projectName }}</td>
+                        <td>{{ project.projectCode }}</td>
+                        <td><span class="warn">{{ projectWarnings(project) }}</span></td>
+                        @if (canChange()) {
+                          <td class="actions">
+                            <button type="button" class="danger" (click)="deleteProject(project)" [disabled]="saving()">Remove</button>
+                          </td>
+                        }
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+        }
+      }
     </div>
+  </section>
+</div>

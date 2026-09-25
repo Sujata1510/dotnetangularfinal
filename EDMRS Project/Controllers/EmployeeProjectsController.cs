@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EDMRS.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")]
 public class EmployeeProjectsController : ControllerBase
 {
     private readonly IEmployeeProjectRepository _repository;
@@ -43,7 +43,7 @@ public class EmployeeProjectsController : ControllerBase
             return Conflict(new { message = "Employee is already assigned to this project." });
 
         // Business Rule: Total allocation across projects must not exceed 100%
-        var currentTotal = await _repository.GetTotalAllocationForEmployeeAsync(dto.EmployeeID);
+        var currentTotal = await _repository.GetOverlappingAllocationAsync(dto.EmployeeID, dto.StartDate, dto.EndDate);
         if (currentTotal + dto.AllocationPercentage > 100.00m)
         {
             return BadRequest(new
@@ -66,12 +66,19 @@ public class EmployeeProjectsController : ControllerBase
         return Ok(new { message = "Employee successfully assigned to project." });
     }
 
+    [HttpGet]
+    [Authorize(Roles = "Admin, Viewer")]
+    [ProducesResponseType(typeof(IEnumerable<EmployeeProjectReadDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<EmployeeProjectReadDto>>> GetAll()
+    {
+        return Ok(await _repository.GetAllAssignmentsAsync());
+    }
+
     /// <summary>
     /// Gets all employee assignments for a specific project.
     /// </summary>
     [HttpGet("project/{projectId:int}")]
-    [Authorize(Roles = "Admin, Manager, Viewer, Data Analyst")]
-
+    [Authorize(Roles = "Admin, Manager, Viewer")]
     [ProducesResponseType(typeof(IEnumerable<EmployeeProjectReadDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<EmployeeProjectReadDto>>> GetByProject(int projectId)
     {
@@ -83,8 +90,7 @@ public class EmployeeProjectsController : ControllerBase
     /// Gets all project assignments for a specific employee.
     /// </summary>s
     [HttpGet("employee/{employeeId:int}")]
-    [Authorize(Roles = "Admin, Manager, Viewer, Data Analyst")]
-
+    [Authorize(Roles = "Admin, Manager, Viewer")]
     [ProducesResponseType(typeof(IEnumerable<EmployeeProjectReadDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<EmployeeProjectReadDto>>> GetByEmployee(int employeeId)
     {

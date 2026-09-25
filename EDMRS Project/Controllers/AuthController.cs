@@ -1,6 +1,8 @@
-﻿using EDMRS_Project.Models.DTOs;
+﻿using EDMRS_Project.Data;
+using EDMRS_Project.Models.DTOs;
 using EDMRS_Project.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace EDMRS.Api.Controllers;
 
@@ -9,15 +11,17 @@ namespace EDMRS.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly EdmrsDbContext _db;
     private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger)
+    public AuthController(IAuthService authService, EdmrsDbContext db, ILogger<AuthController> logger)
     {
         _authService = authService;
+        _db = db;
         _logger = logger;
     }
 
-    [HttpPost("login/login")]
+    [HttpPost("login")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -28,6 +32,22 @@ public class AuthController : ControllerBase
         try
         {
             _logger.LogInformation("Login attempt for email: {Email}", request.Email);
+
+            var loginName = request.Email.Trim();
+            if (!loginName.Contains('@'))
+            {
+                var people = _db.Employees.Select(e => new { e.EmployeeID, e.EmployeeCode, e.Email });
+                var person = int.TryParse(loginName, out var employeeId)
+                    ? await people.FirstOrDefaultAsync(e => e.EmployeeID == employeeId)
+                    : null;
+                person ??= await people.FirstOrDefaultAsync(e => e.EmployeeCode.ToLower() == loginName.ToLower());
+                if (person == null || string.IsNullOrWhiteSpace(person.Email))
+                {
+                    return Unauthorized(new { message = "Invalid employee ID or password." });
+                }
+
+                request.Email = person.Email.Trim();
+            }
 
             var result = await _authService.AuthenticateAsync(request);
 
@@ -51,18 +71,47 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
     {
-        var restrictedRoles = new[] { "Admin" };
-        if (!string.IsNullOrEmpty(request.Role) && restrictedRoles.Contains(request.Role, StringComparer.OrdinalIgnoreCase))
+        var code = request.EmployeeCode?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(code))
         {
-            return BadRequest(new { message = "Registration for administrative roles is not permitted." });
+            return BadRequest(new { message = "Employee ID is needed." });
         }
 
-        var success = await _authService.RegisterUserAsync(request.FullName, request.Email, request.Password, request.Role ?? "Viewer");
+        var employees = _db.Employees.Select(e => new
+        {
+            e.EmployeeID,
+            e.EmployeeCode,
+            e.Email,
+            e.FirstName,
+            e.LastName
+        });
+        var employee = int.TryParse(code, out var employeeId)
+            ? await employees.FirstOrDefaultAsync(e => e.EmployeeID == employeeId)
+            : null;
+        employee ??= await employees.FirstOrDefaultAsync(e => e.EmployeeCode.ToLower() == code.ToLower());
+        if (employee == null)
+        {
+            return BadRequest(new { message = "That employee ID is not in the list." });
+        }
+
+        var email = employee.Email?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return BadRequest(new { message = "This employee has no email saved." });
+        }
+
+        if (await _db.Users.AnyAsync(u => u.Email.ToLower() == email.ToLower()))
+        {
+            return BadRequest(new { message = "Already registered." });
+        }
+
+        var fullName = $"{employee.FirstName} {employee.LastName}".Trim();
+        var success = await _authService.RegisterUserAsync(fullName, email, request.Password, "Viewer");
 
         if (!success)
-            return BadRequest(new { message = "User with this email already exists." });
+            return BadRequest(new { message = "Already registered." });
 
-        return Ok(new { message = "User registered successfully." });
+        return Ok(new { message = "You are registered as a Viewer. Sign in to continue." });
     }
 
     [HttpPost("register-seed")]

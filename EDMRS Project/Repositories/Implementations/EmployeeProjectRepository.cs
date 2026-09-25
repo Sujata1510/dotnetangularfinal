@@ -16,48 +16,51 @@ public class EmployeeProjectRepository : IEmployeeProjectRepository
         _context = context;
     }
 
+    public async Task<IEnumerable<EmployeeProjectReadDto>> GetAllAssignmentsAsync()
+    {
+        return await ProjectAssignments(_context.EmployeeProjects).ToListAsync();
+    }
+
     public async Task<IEnumerable<EmployeeProjectReadDto>> GetAssignmentsByProjectAsync(int projectId)
     {
-        return await _context.EmployeeProjects
-            .Include(ep => ep.Employee)
-            .Include(ep => ep.Project)
-            .AsNoTracking()
-            .Where(ep => ep.ProjectID == projectId)
-            .Select(ep => new EmployeeProjectReadDto
-            {
-                EmployeeID = ep.EmployeeID,
-                EmployeeCode = ep.Employee.EmployeeCode,
-                EmployeeName = $"{ep.Employee.FirstName} {ep.Employee.LastName}",
-                ProjectID = ep.ProjectID,
-                ProjectName = ep.Project.ProjectName,
-                Role = ep.Role,
-                AllocationPercentage = ep.AllocationPercentage,
-                StartDate = ep.StartDate,
-                EndDate = ep.EndDate
-            })
-            .ToListAsync();
+        return await ProjectAssignments(_context.EmployeeProjects.Where(ep => ep.ProjectID == projectId)).ToListAsync();
     }
 
     public async Task<IEnumerable<EmployeeProjectReadDto>> GetAssignmentsByEmployeeAsync(int employeeId)
     {
-        return await _context.EmployeeProjects
-            .Include(ep => ep.Employee)
-            .Include(ep => ep.Project)
+        return await ProjectAssignments(_context.EmployeeProjects.Where(ep => ep.EmployeeID == employeeId)).ToListAsync();
+    }
+
+    public async Task<decimal> GetOverlappingAllocationAsync(int employeeId, DateTime start, DateTime? end, int? excludeProjectId = null)
+    {
+        var windowEnd = end ?? DateTime.MaxValue;
+        var rows = await _context.EmployeeProjects
             .AsNoTracking()
-            .Where(ep => ep.EmployeeID == employeeId)
+            .Where(ep => ep.EmployeeID == employeeId && (!excludeProjectId.HasValue || ep.ProjectID != excludeProjectId.Value))
+            .Select(ep => new { ep.AllocationPercentage, ep.StartDate, ep.EndDate })
+            .ToListAsync();
+
+        return rows
+            .Where(ep => ep.StartDate <= windowEnd && start <= (ep.EndDate ?? DateTime.MaxValue))
+            .Sum(ep => ep.AllocationPercentage);
+    }
+
+    private static IQueryable<EmployeeProjectReadDto> ProjectAssignments(IQueryable<EmployeeProject> query)
+    {
+        return query
+            .AsNoTracking()
             .Select(ep => new EmployeeProjectReadDto
             {
                 EmployeeID = ep.EmployeeID,
                 EmployeeCode = ep.Employee.EmployeeCode,
-                EmployeeName = $"{ep.Employee.FirstName} {ep.Employee.LastName}",
+                EmployeeName = ep.Employee.FirstName + " " + ep.Employee.LastName,
                 ProjectID = ep.ProjectID,
                 ProjectName = ep.Project.ProjectName,
                 Role = ep.Role,
                 AllocationPercentage = ep.AllocationPercentage,
                 StartDate = ep.StartDate,
                 EndDate = ep.EndDate
-            })
-            .ToListAsync();
+            });
     }
 
     public async Task<decimal> GetTotalAllocationForEmployeeAsync(int employeeId, int? excludeProjectId = null)
@@ -92,6 +95,16 @@ public class EmployeeProjectRepository : IEmployeeProjectRepository
 
         _context.EmployeeProjects.Remove(assignment);
         return await _context.SaveChangesAsync() > 0;
+    }
+
+    public async Task RemoveAllForProjectAsync(int projectId)
+    {
+        var rows = await _context.EmployeeProjects.Where(ep => ep.ProjectID == projectId).ToListAsync();
+        if (rows.Count == 0)
+            return;
+
+        _context.EmployeeProjects.RemoveRange(rows);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<bool> EmployeeExistsAsync(int employeeId)

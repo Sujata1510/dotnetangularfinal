@@ -27,7 +27,7 @@ public class AuthService : IAuthService
     {
         var claims = new[]
         {
-        new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
+        new Claim(ClaimTypes.NameIdentifier, user.ID.ToString()),
         new Claim(ClaimTypes.Email, user.Email),
         // ADD THIS LINE: Embeds the user's role into the token
         new Claim(ClaimTypes.Role, user.Role) // e.g. "Admin" or "DataManager"
@@ -53,7 +53,7 @@ public class AuthService : IAuthService
 
         var user = new User
         {
-            Username = username,
+            FullName = username,
             Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
             Role = role
@@ -94,8 +94,8 @@ public class AuthService : IAuthService
         {
             Subject = new ClaimsIdentity(new[]
             {
-                new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
-                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.NameIdentifier, user.ID.ToString()),
+                new Claim(ClaimTypes.Name, user.FullName),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role)
             }),

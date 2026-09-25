@@ -43,7 +43,9 @@ public class EmployeeRepository : IEmployeeRepository
             query = query.Where(e => e.PositionID == parameters.PositionID.Value);
 
         if (parameters.IsActive.HasValue)
-            query = query.Where(e => e.IsActive == parameters.IsActive.Value);
+            query = query.Where(e => parameters.IsActive.Value ? e.Status == "Active" : e.Status != "Active");
+        else
+            query = query.Where(e => e.Status == "Active");
 
         // 3. Dynamic Sorting
         var sortBy = parameters.SortBy?.ToLowerInvariant();
@@ -72,9 +74,9 @@ public class EmployeeRepository : IEmployeeRepository
                 FirstName = e.FirstName,
                 LastName = e.LastName,
                 Email = e.Email,
-                Phone = e.Phone,
+                Phone = e.Phone ?? string.Empty,
                 HireDate = e.HireDate,
-                IsActive = e.IsActive,
+                IsActive = e.Status == "Active",
                 DepartmentID = e.DepartmentID,
                 DepartmentName = e.Department != null ? e.Department.DepartmentName : string.Empty,
                 PositionID = e.PositionID,
@@ -103,9 +105,9 @@ public class EmployeeRepository : IEmployeeRepository
                 FirstName = e.FirstName,
                 LastName = e.LastName,
                 Email = e.Email,
-                Phone = e.Phone,
+                Phone = e.Phone ?? string.Empty,
                 HireDate = e.HireDate,
-                IsActive = e.IsActive,
+                IsActive = e.Status == "Active",
                 DepartmentID = e.DepartmentID,
                 DepartmentName = e.Department != null ? e.Department.DepartmentName : string.Empty,
                 PositionID = e.PositionID,
@@ -131,16 +133,15 @@ public class EmployeeRepository : IEmployeeRepository
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var employee = await _context.Employees.FindAsync(id);
-        if (employee == null) return false;
+        var exists = await _context.Employees.AnyAsync(e => e.EmployeeID == id && e.Status == "Active");
+        if (!exists)
+            return false;
 
-        // Perform soft delete
-        employee.IsActive = false;
-        employee.Status = "Inactive";
-        employee.UpdatedDate = DateTime.UtcNow;
-
-        _context.Employees.Update(employee);
-        return await _context.SaveChangesAsync() > 0;
+        await _context.EmployeeProjects.Where(ep => ep.EmployeeID == id).ExecuteDeleteAsync();
+        var updated = await _context.Employees
+            .Where(e => e.EmployeeID == id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(e => e.Status, "Inactive"));
+        return updated > 0;
     }
 
     public async Task<bool> EmployeeCodeExistsAsync(string employeeCode, int? excludeId = null)

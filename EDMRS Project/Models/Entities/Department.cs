@@ -1,7 +1,10 @@
-﻿namespace EDMRS_Project.Models.Entities
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace EDMRS_Project.Models.Entities
 {
     public class Department
     {
+        [Column("Id")]
         public int DepartmentID { get; set; }
         public string DepartmentCode { get; set; } = string.Empty;
         public string DepartmentName { get; set; } = string.Empty;

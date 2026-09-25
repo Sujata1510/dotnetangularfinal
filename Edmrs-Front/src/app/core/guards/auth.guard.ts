@@ -6,21 +6,31 @@ export const authGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  if (authService.isAuthenticated()) {
-    const expectedRoles = (route.data['roles'] as Array<string>) || [];
-
-    if (expectedRoles && expectedRoles.length > 0) {
-      const userRoles = authService.userRoles().map((r) => r.toLowerCase().trim());
-      const hasRole = expectedRoles.some((role) => userRoles.includes(role));
-
-      if (!hasRole) {
-        authService.redirectUserByRole();
-        return false;
-      }
-    }
+  if (state.url.includes('/login')) {
     return true;
   }
 
-  router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
-  return false;
+  if (!authService.isAuthenticated()) {
+    authService.clearSession();
+    return router.createUrlTree(['/login']);
+  }
+
+  const expectedRoles = (route.data['roles'] as string[] | undefined) ?? [];
+  if (expectedRoles.length === 0) {
+    return true;
+  }
+
+  const userRoles = authService.userRoles().map((role) => role.toLowerCase());
+  const hasRole = expectedRoles.some((role) => userRoles.includes(role.toLowerCase()));
+  if (hasRole) {
+    return true;
+  }
+
+  const home = authService.homeRouteForCurrentUser();
+  const current = state.url.split('?')[0];
+  if (current === home) {
+    return true;
+  }
+
+  return router.createUrlTree([home]);
 };

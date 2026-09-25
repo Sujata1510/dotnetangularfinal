@@ -11,14 +11,15 @@ namespace EDMRS_Project.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin, DataManager")]
 public class ProjectsController : ControllerBase
 {
     private readonly IProjectRepository _projectRepository;
+    private readonly IEmployeeProjectRepository _employeeProjects;
 
-    public ProjectsController(IProjectRepository projectRepository)
+    public ProjectsController(IProjectRepository projectRepository, IEmployeeProjectRepository employeeProjects)
     {
         _projectRepository = projectRepository;
+        _employeeProjects = employeeProjects;
     }
 
     /// <summary>
@@ -26,6 +27,7 @@ public class ProjectsController : ControllerBase
     /// Retrieves a paginated, filtered, and sorted list of projects.
     /// </summary>
     [HttpGet]
+    [Authorize(Roles = "Admin, Manager, Viewer")]
     public async Task<ActionResult<PagedResultDto<ProjectReadDto>>> GetProjects([FromQuery] ProjectQueryParameterDto query)
     {
         var result = await _projectRepository.GetPagedAsync(query);
@@ -37,7 +39,7 @@ public class ProjectsController : ControllerBase
     /// Retrieves a single project by ID.
     /// </summary>
     [HttpGet("{id:int}")]
-    [Authorize(Roles = "Admin, DataManager")]
+    [Authorize(Roles = "Admin, Manager, Viewer")]
     public async Task<ActionResult<ProjectReadDto>> GetProject(int id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
@@ -54,7 +56,6 @@ public class ProjectsController : ControllerBase
     /// POST: api/Projects
     /// Creates a new project with business validation rules.
     /// </summary>
-    [HttpPost]
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<ProjectReadDto>> CreateProject([FromBody] ProjectCreateDto dto)
@@ -114,14 +115,14 @@ public class ProjectsController : ControllerBase
         }
 
         // 2. Validate Foreign Keys
-        if (!await _projectRepository.ClientExistsAsync(dto.ClientID))
+        if (dto.ClientID > 0 && !await _projectRepository.ClientExistsAsync(dto.ClientID))
         {
-            return BadRequest(new { Message = $"Invalid ClientID: {dto.ClientID}." });
+            return BadRequest(new { message = $"Invalid ClientID: {dto.ClientID}." });
         }
 
-        if (!await _projectRepository.DepartmentExistsAsync(dto.DepartmentID))
+        if (dto.DepartmentID > 0 && !await _projectRepository.DepartmentExistsAsync(dto.DepartmentID))
         {
-            return BadRequest(new { Message = $"Invalid DepartmentID: {dto.DepartmentID}." });
+            return BadRequest(new { message = $"Invalid DepartmentID: {dto.DepartmentID}." });
         }
 
         if (dto.ManagerID.HasValue && !await _projectRepository.EmployeeExistsAsync(dto.ManagerID.Value))
@@ -136,6 +137,11 @@ public class ProjectsController : ControllerBase
             return StatusCode(500, new { Message = "An error occurred while updating the project." });
         }
 
+        if (string.Equals(dto.Status?.Trim(), "Deadlock", StringComparison.OrdinalIgnoreCase))
+        {
+            await _employeeProjects.RemoveAllForProjectAsync(id);
+        }
+
         return NoContent();
     }
 
@@ -147,10 +153,17 @@ public class ProjectsController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteProject(int id)
     {
+        var existing = await _projectRepository.GetByIdAsync(id);
+        if (existing == null)
+        {
+            return NotFound(new { message = $"Project with ID {id} was not found." });
+        }
+
+        await _employeeProjects.RemoveAllForProjectAsync(id);
         var deleted = await _projectRepository.DeleteAsync(id);
         if (!deleted)
         {
-            return NotFound(new { Message = $"Project with ID {id} was not found." });
+            return NotFound(new { message = $"Project with ID {id} was not found." });
         }
 
         return NoContent();

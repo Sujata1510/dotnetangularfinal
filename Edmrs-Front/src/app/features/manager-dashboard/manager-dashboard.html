@@ -1,114 +1,43 @@
-<!-- <div class="dashboard-container">
-  <!-- Header 
-  <header class="dashboard-header">
-    <div>
-      <h1>Manager Workspace</h1>
-      <p>Welcome back, {{ authService.currentUser()?.fullName }}. Here is your team's current status.</p>
-    </div>
-    <button class="btn btn-refresh" (click)="loadDashboardData()">
-      ↻ Refresh
-    </button>
-  </header>
+<app-workspace roleLabel="Manager" section="Team projects">
+  <app-project-board
+    [projects]="projects()"
+    [assignments]="assignments()"
+    [selectedId]="selectedId()"
+    [showBudget]="false"
+    [showAssigneeCode]="true"
+    [loading]="loading()"
+    [error]="error()"
+    (selected)="openProject($event)"
+  />
 
-  <!-- Metric Cards 
-  <div class="metrics-grid">
-    <div class="card metric-card teal">
-      <div class="metric-value">{{ metrics().teamSize }}</div>
-      <div class="metric-label">Team Members</div>
-    </div>
-    <div class="card metric-card amber">
-      <div class="metric-value">{{ metrics().pendingApprovals }}</div>
-      <div class="metric-label">Pending Approvals</div>
-    </div>
-    <div class="card metric-card indigo">
-      <div class="metric-value">{{ metrics().completedTasksThisMonth }}</div>
-      <div class="metric-label">Tasks Completed</div>
-    </div>
-    <div class="card metric-card green">
-      <div class="metric-value">{{ metrics().overallPerformanceScore }}%</div>
-      <div class="metric-label">Team Efficiency</div>
-    </div>
-  </div>
-
-   Pending Approvals Queue 
-  <div class="card approvals-card">
-    <div class="table-toolbar">
-      <h3>Pending Approvals Queue</h3>
-      <select 
-        class="filter-select" 
-        [ngModel]="filterType()" 
-        (ngModelChange)="filterType.set($event)">
-        <option value="All">All Request Types</option>
-        <option value="Leave Request">Leave Requests</option>
-        <option value="Data Change">Data Changes</option>
-        <option value="Report Access">Report Access</option>
-        <option value="Equipment">Equipment</option>
-      </select>
-    </div>
-
-    @if (isLoading()) {
-      <div class="loading-spinner">Loading pending approvals...</div>
+  <section class="panel">
+    <h2>Team directory</h2>
+    <p class="meta">Names, roles, and locations. Budget and master-data setup stay with Admin.</p>
+    @if (employees().length === 0) {
+      <p class="meta">No employees returned.</p>
     } @else {
-      <table class="data-table">
+      <table>
         <thead>
           <tr>
-            <th>Employee Name</th>
-            <th>Type</th>
-            <th>Request Details</th>
-            <th>Date Submitted</th>
-            <th>Actions</th>
+            <th>Name</th>
+            <th>Department</th>
+            <th>Position</th>
+            <th>Location</th>
+            <th>Active</th>
           </tr>
         </thead>
         <tbody>
-          @for (item of filteredApprovals(); track item.id) {
+          @for (person of employees(); track person.employeeID) {
             <tr>
-              <td class="font-bold">{{ item.employeeName }}</td>
-              <td>
-                <span class="badge badge-info">{{ item.requestType }}</span>
-              </td>
-              <td>{{ item.details }}</td>
-              <td>{{ item.submittedDate | date:'mediumDate' }}</td>
-              <td class="action-buttons">
-                <button 
-                  class="btn btn-sm btn-success" 
-                  (click)="handleApprovalAction(item, 'Approved')">
-                  Approve
-                </button>
-                <button 
-                  class="btn btn-sm btn-danger" 
-                  (click)="handleApprovalAction(item, 'Rejected')">
-                  Reject
-                </button>
-              </td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="5" class="text-center empty-state">No pending approvals found.</td>
+              <td>{{ person.fullName }}</td>
+              <td>{{ person.departmentName }}</td>
+              <td>{{ person.positionTitle }}</td>
+              <td>{{ person.locationName }}</td>
+              <td>{{ person.isActive ? 'Yes' : 'No' }}</td>
             </tr>
           }
         </tbody>
       </table>
     }
-  </div>
-</div> -->
-
- <div class="dashboard-container manager-theme">
-      <header class="dashboard-header">
-        <h1>Manager Portal</h1>
-        <div class="user-info">
-          <span>Welcome, <strong>{{ authService.currentUser()?.fullName }}</strong> (Manager)</span>
-          <button (click)="authService.logout()" class="btn-logout">Logout</button>
-        </div>
-      </header>
-
-      <section class="metrics-grid">
-        <div class="card"><h3>Team Employees</h3><p class="stat">42</p></div>
-        <div class="card"><h3>Department Projects</h3><p class="stat">14</p></div>
-        <div class="card"><h3>Pending Approvals</h3><p class="stat">5</p></div>
-      </section>
-
-      <section class="manager-actions">
-        <h2>Departmental Operations</h2>
-        <p>Privileges granted: Employee Management, Project Allocations, Lookup Data Viewing.</p>
-      </section>
-    </div>
+  </section>
+</app-workspace>

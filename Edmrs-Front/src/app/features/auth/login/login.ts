@@ -1,59 +1,88 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  template: `
-    <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
-      <div style="width: 100%; max-width: 400px; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background: #ffffff;">
-        <h2>EDMRS Portal Sign In</h2>
-        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Enter your credentials to access your dashboard</p>
-
-        <div *ngIf="errorMessage()" style="padding: 10px; background: #f8d7da; color: #721c24; border-radius: 4px; margin-bottom: 15px;">
-          {{ errorMessage() }}
-        </div>
-
-        <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
-          <div style="margin-bottom: 15px;">
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Email Address</label>
-            <input type="email" formControlName="email" placeholder="admin@edmrs.com" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" />
-            <small *ngIf="email?.invalid && email?.touched" style="color: red; font-size: 12px;">Valid email is required</small>
-          </div>
-
-          <div style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Password</label>
-            <input type="password" formControlName="password" placeholder="••••••••" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" />
-            <small *ngIf="password?.invalid && password?.touched" style="color: red; font-size: 12px;">Password is required</small>
-          </div>
-
-          <button type="submit" [disabled]="loginForm.invalid || isLoading()" style="width: 100%; padding: 12px; background: #0056b3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
-            {{ isLoading() ? 'Signing in...' : 'Sign In' }}
-          </button>
-        </form>
-      </div>
-    </div>
-  `
+  imports: [ReactiveFormsModule, FormsModule],
+  templateUrl: './login.html',
+  styleUrl: './login.scss'
 })
 export class LoginComponent implements OnInit {
-  private fb = inject(FormBuilder);
-  private authService = inject(AuthService);
+  private readonly fb = inject(FormBuilder);
+  private readonly authService = inject(AuthService);
 
-  loginForm = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]]
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+  readonly notice = signal<string | null>(null);
+  readonly mode = signal<'login' | 'register'>('login');
+
+  readonly registerDraft = signal({ employeeCode: '', password: '' });
+  readonly registerWarnings = computed(() => {
+    const value = this.registerDraft();
+    const code = value.employeeCode.trim();
+    const codeOk = /^EMP\d{3}$/i.test(code) || /^\d+$/.test(code);
+    return {
+      employeeCode: code && !codeOk ? 'Employee ID must look like EMP001' : '',
+      password: value.password && value.password.length < 6 ? 'Password needs at least 6 characters' : ''
+    };
   });
 
-  isLoading = signal<boolean>(false);
-  errorMessage = signal<string | null>(null);
+  readonly loginForm = this.fb.nonNullable.group({
+    email: ['', Validators.required],
+    password: ['', [Validators.required, Validators.minLength(6)]]
+  });
 
   ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
       this.authService.redirectUserByRole();
     }
+  }
+
+  showRegister(): void {
+    this.mode.set('register');
+    this.errorMessage.set(null);
+    this.notice.set(null);
+  }
+
+  showLogin(): void {
+    this.mode.set('login');
+    this.errorMessage.set(null);
+  }
+
+  setRegister<K extends 'employeeCode' | 'password'>(key: K, value: string): void {
+    this.registerDraft.update((draft) => ({ ...draft, [key]: value }));
+    this.errorMessage.set(null);
+  }
+
+  onRegister(): void {
+    const value = this.registerDraft();
+    const warnings = this.registerWarnings();
+    if (!value.employeeCode.trim() || value.password.length < 6 || warnings.employeeCode || warnings.password) {
+      this.errorMessage.set('Fix the fields before you register.');
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    this.notice.set(null);
+    this.authService
+      .register({
+        employeeCode: value.employeeCode.trim(),
+        password: value.password
+      })
+      .subscribe({
+        next: (res) => {
+          this.isLoading.set(false);
+          this.notice.set(res.message || 'You are registered as a Viewer. Sign in to continue.');
+          this.mode.set('login');
+        },
+        error: (err: { status?: number; error?: { message?: string } }) => {
+          this.isLoading.set(false);
+          this.errorMessage.set(err.error?.message || 'Could not register.');
+        }
+      });
   }
 
   onLogin(): void {
@@ -65,26 +94,23 @@ export class LoginComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.authService.login(this.loginForm.value as any).subscribe({
-      next: (res) => {
+    const { email, password } = this.loginForm.getRawValue();
+    this.authService.login({ email, password }).subscribe({
+      next: () => {
         this.isLoading.set(false);
-        if (res.isSuccess) {
-          this.authService.redirectUserByRole();
-        } else {
-          this.errorMessage.set(res.message || 'Authentication failed.');
-        }
+        this.authService.redirectUserByRole();
       },
-      error: (err) => {
+      error: (err: { status?: number; error?: { message?: string } }) => {
         this.isLoading.set(false);
+        this.authService.clearSession();
         if (err.status === 0) {
-          this.errorMessage.set('Cannot reach .NET API server. Check if API is running & CORS is enabled.');
-        } else {
+          this.errorMessage.set('Cannot reach the API. Confirm it is running and CORS allows http://localhost:4200.');
+        } else if (err.status === 401) {
           this.errorMessage.set(err.error?.message || 'Invalid email or password.');
+        } else {
+          this.errorMessage.set(err.error?.message || 'Sign in failed. Try again.');
         }
       }
     });
   }
-
-  get email() { return this.loginForm.get('email'); }
-  get password() { return this.loginForm.get('password'); }
 }

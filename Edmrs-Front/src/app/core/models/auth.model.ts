@@ -3,17 +3,20 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface AuthResponse {
-  isSuccess: boolean;
+/** CamelCase body returned by POST /api/auth/login. */
+export interface LoginResponse {
   token: string;
   email: string;
-  fullName: string;
-  roles: string[];
-  message: string;
+  role: string;
+  expiresAt: string;
+  fullName?: string;
+  roles?: string[];
+  message?: string;
 }
 
 export interface UserSession {
   email: string;
   fullName: string;
   roles: string[];
+  expiresAt: string | null;
 }

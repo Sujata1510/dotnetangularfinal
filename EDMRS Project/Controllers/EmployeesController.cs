@@ -24,7 +24,7 @@ public class EmployeesController : ControllerBase
     /// Retrieves a paginated list of employees with optional search, filtering, and sorting.
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "Admin, DataManager")]
+    [Authorize(Roles = "Admin, Manager, Viewer")]
     [ProducesResponseType(typeof(PagedResultDto<EmployeeReadDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResultDto<EmployeeReadDto>>> GetEmployees([FromQuery] EmployeeQueryParametersDto parameters)
     {
@@ -36,7 +36,7 @@ public class EmployeesController : ControllerBase
     /// Retrieves a specific employee by ID.
     /// </summary>
     [HttpGet("{id:int}")]
-    [Authorize(Roles = "Admin, DataManager")]
+    [Authorize(Roles = "Admin, Manager")]
     [ProducesResponseType(typeof(EmployeeReadDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<EmployeeReadDto>> GetEmployeeById(int id)
@@ -81,7 +81,7 @@ public class EmployeesController : ControllerBase
             DepartmentID = dto.DepartmentID,
             PositionID = dto.PositionID,
             LocationID = dto.LocationID,
-            IsActive = true
+            Status = "Active"
         };
 
         var createdEntity = await _employeeRepository.CreateAsync(entity);
@@ -129,7 +129,7 @@ public class EmployeesController : ControllerBase
             DepartmentID = dto.DepartmentID,
             PositionID = dto.PositionID,
             LocationID = dto.LocationID,
-            IsActive = dto.IsActive
+            Status = dto.IsActive ? "Active" : "Inactive"
         };
 
         var updated = await _employeeRepository.UpdateAsync(entityToUpdate);

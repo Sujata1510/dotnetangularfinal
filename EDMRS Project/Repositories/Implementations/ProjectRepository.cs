@@ -68,6 +68,8 @@ public class ProjectRepository : IProjectRepository
                 ProjectID = p.ProjectID,
                 ProjectCode = p.ProjectCode,
                 ProjectName = p.ProjectName,
+                ClientName = _context.Clients.Where(c => c.ClientID == p.ClientID).Select(c => c.ClientName).FirstOrDefault() ?? string.Empty,
+                DepartmentName = _context.Departments.Where(d => d.DepartmentID == p.DepartmentID).Select(d => d.DepartmentName).FirstOrDefault() ?? string.Empty,
                 StartDate = p.StartDate,
                 EndDate = p.EndDate,
                 Budget = p.Budget,
@@ -95,6 +97,8 @@ public class ProjectRepository : IProjectRepository
                 ProjectID = p.ProjectID,
                 ProjectCode = p.ProjectCode,
                 ProjectName = p.ProjectName,
+                ClientName = _context.Clients.Where(c => c.ClientID == p.ClientID).Select(c => c.ClientName).FirstOrDefault() ?? string.Empty,
+                DepartmentName = _context.Departments.Where(d => d.DepartmentID == p.DepartmentID).Select(d => d.DepartmentName).FirstOrDefault() ?? string.Empty,
                 StartDate = p.StartDate,
                 EndDate = p.EndDate,
                 Budget = p.Budget,
@@ -174,8 +178,31 @@ public class ProjectRepository : IProjectRepository
         throw new NotImplementedException();
     }
 
-    public Task<bool> UpdateAsync(int id, ProjectUpdateDto dto)
+    public async Task<bool> UpdateAsync(int id, ProjectUpdateDto dto)
     {
-        throw new NotImplementedException();
+        var existing = await _context.Projects.FindAsync(id);
+        if (existing == null)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(dto.ProjectName))
+            existing.ProjectName = dto.ProjectName.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.ProjectCode))
+            existing.ProjectCode = dto.ProjectCode.Trim();
+        if (dto.ClientID > 0)
+            existing.ClientID = dto.ClientID;
+        if (dto.DepartmentID > 0)
+            existing.DepartmentID = dto.DepartmentID;
+        if (dto.ManagerID.HasValue)
+            existing.ManagerID = dto.ManagerID;
+        if (dto.StartDate != default)
+            existing.StartDate = dto.StartDate;
+        existing.EndDate = dto.EndDate;
+        if (dto.Budget > 0)
+            existing.Budget = dto.Budget;
+        if (!string.IsNullOrWhiteSpace(dto.Status))
+            existing.Status = dto.Status.Trim();
+
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

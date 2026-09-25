@@ -31,7 +31,7 @@ export interface SharedReport {
 })
 export class ViewerService {
   private http = inject(HttpClient);
-  private readonly apiUrl = 'https://localhost:7001/api/viewer';
+  private readonly apiUrl = 'http://localhost:5000/api/viewer';
 
   getMetrics(): Observable<ViewerMetrics> {
     return this.http.get<ViewerMetrics>(`${this.apiUrl}/metrics`);

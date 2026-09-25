@@ -1,7 +1,10 @@
-﻿namespace EDMRS_Project.Models.Entities
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace EDMRS_Project.Models.Entities
 {
     public class Location
     {
+        [Column("Id")]
         public int LocationID { get; set; }
         public string LocationCode { get; set; } = string.Empty;
         public string LocationName { get; set; } = string.Empty;

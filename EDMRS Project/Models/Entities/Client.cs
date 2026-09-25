@@ -1,7 +1,10 @@
-﻿namespace EDMRS_Project.Models.Entities
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace EDMRS_Project.Models.Entities
 {
     public class Client
     {
+        [Column("Id")]
         public int ClientID { get; set; }
         public string ClientCode { get; set; } = string.Empty;
         public string ClientName { get; set; } = string.Empty;

@@ -23,7 +23,7 @@ export interface PendingApproval {
 })
 export class ManagerService {
   private http = inject(HttpClient);
-  private readonly apiUrl = 'https://localhost:7001/api/manager';
+  private readonly apiUrl = 'http://localhost:5000/api/manager';
 
   getMetrics(): Observable<ManagerMetrics> {
     return this.http.get<ManagerMetrics>(`${this.apiUrl}/metrics`);

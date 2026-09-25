@@ -1,27 +1,58 @@
-import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { AuthService } from '../../core/services/auth.service';
+import { Component, inject, OnInit } from '@angular/core';
+import { EmployeeService } from '../../core/services/employee.service';
+import { ProjectService } from '../../core/services/project.service';
+import { AssignmentService } from '../../core/services/assignment.service';
+import { WarehouseState } from '../../core/state/warehouse.state';
+import { WorkspaceComponent } from '../../shared/components/workspace/workspace';
+import { ProjectBoardComponent } from '../../shared/components/project-board/project-board';
 
 @Component({
   selector: 'app-manager-dashboard',
   standalone: true,
-  imports: [CommonModule],
-  template: `
-    <div style="padding: 30px;">
-      <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e0e0e0; padding-bottom: 15px;">
-        <h1>Manager Portal</h1>
-        <div>
-          <span>Welcome, <strong>{{ authService.currentUser()?.fullName }}</strong> (Manager)</span>
-          <button (click)="authService.logout()" style="margin-left: 15px; background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Logout</button>
-        </div>
-      </header>
-      <div style="margin-top: 20px;">
-        <h3>Operational Privileges Granted</h3>
-        <p>Employee Operations, Project Allocations, Lookup Analytics.</p>
-      </div>
-    </div>
-  `
+  imports: [WorkspaceComponent, ProjectBoardComponent],
+  templateUrl: './manager-dashboard.html',
+  styleUrl: './manager-dashboard.scss'
 })
-export class ManagerDashboardComponent {
-  authService = inject(AuthService);
+export class ManagerDashboardComponent implements OnInit {
+  private readonly projectsApi = inject(ProjectService);
+  private readonly assignmentsApi = inject(AssignmentService);
+  private readonly employeesApi = inject(EmployeeService);
+  private readonly state = inject(WarehouseState);
+
+  readonly projects = this.state.projects;
+  readonly assignments = this.state.assignments;
+  readonly employees = this.state.employees;
+  readonly selectedId = this.state.selectedId;
+  readonly loading = this.state.loading;
+  readonly error = this.state.error;
+
+  ngOnInit(): void {
+    this.projectsApi.getProjects().subscribe({
+      next: (page) => {
+        const items = page.items ?? [];
+        this.projects.set(items);
+        this.loading.set(false);
+        if (items[0]) {
+          this.openProject(items[0].projectID);
+        }
+      },
+      error: () => {
+        this.loading.set(false);
+        this.error.set('Projects could not be loaded for the Manager role.');
+      }
+    });
+
+    this.employeesApi.getDirectory().subscribe({
+      next: (page) => this.employees.set(page.items ?? []),
+      error: () => this.error.set('The employee directory is not available for this session.')
+    });
+  }
+
+  openProject(projectId: number): void {
+    this.selectedId.set(projectId);
+    this.assignmentsApi.getByProject(projectId).subscribe({
+      next: (rows) => this.assignments.set(rows),
+      error: () => this.assignments.set([])
+    });
+  }
 }

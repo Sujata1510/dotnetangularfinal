@@ -34,7 +34,7 @@ public class MasterDataRepository : IMasterDataRepository
             .OrderBy(p => p.PositionName)
             .Select(p => new LookupDto
             {
-                Id = p.PositionID,
+                Id = p.ID,
                 Name = p.PositionName
             })
             .ToListAsync();

@@ -1,9 +1,11 @@
 ﻿using EDMRS.Api.Repositories.Interfaces;
 using EDMRS_Project.Models.DTOs.Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EDMRS.Api.Controllers;
 
+[Authorize(Roles = "Admin, Manager")]
 [ApiController]
 [Route("api/[controller]")]
 public class LookupsController : ControllerBase

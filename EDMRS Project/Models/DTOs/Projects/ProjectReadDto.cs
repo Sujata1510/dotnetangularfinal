@@ -3,10 +3,10 @@
     public class ProjectReadDto
     {
         public int ProjectID { get; set; }
-        public string ProjectCode { get; set; }
-        public string ProjectName { get; set; }
-        public string ClientName { get; set; }
-        public string DepartmentName { get; set; }
+        public string ProjectCode { get; set; } = string.Empty;
+        public string ProjectName { get; set; } = string.Empty;
+        public string ClientName { get; set; } = string.Empty;
+        public string DepartmentName { get; set; } = string.Empty;
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public decimal Budget { get; set; }

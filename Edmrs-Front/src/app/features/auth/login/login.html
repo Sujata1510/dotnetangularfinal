@@ -1,102 +1,61 @@
-<!-- <!-- <div class="login-wrapper">
+<div class="login-wrapper">
   <div class="login-card">
-    <div class="header">
-      <h2>EDMRS Portal</h2>
-      <p>Enter your corporate credentials</p>
-    </div>
+    <h2>{{ mode() === 'login' ? 'EDMRS System Login' : 'Register' }}</h2>
+    <p class="subtitle">
+      {{ mode() === 'login' ? '' : '' }}
+    </p>
 
     @if (errorMessage()) {
       <div class="alert-error">{{ errorMessage() }}</div>
     }
+    @if (notice()) {
+      <div class="alert-ok">{{ notice() }}</div>
+    }
 
-    <form (ngSubmit)="onLogin()">
+    @if (mode() === 'register') {
+      <form (ngSubmit)="onRegister()">
+        <div class="form-group">
+          <label for="employeeCode">Employee ID</label>
+          <input id="employeeCode" [ngModel]="registerDraft().employeeCode" (ngModelChange)="setRegister('employeeCode', $event)" name="employeeCode" placeholder="EMP001" />
+          @if (registerWarnings().employeeCode) {
+            <small class="err-text">{{ registerWarnings().employeeCode }}</small>
+          }
+        </div>
+        <div class="form-group">
+          <label for="registerPassword">Password</label>
+          <input id="registerPassword" type="password" [ngModel]="registerDraft().password" (ngModelChange)="setRegister('password', $event)" name="registerPassword" placeholder="At least 6 characters" />
+          @if (registerWarnings().password) {
+            <small class="err-text">{{ registerWarnings().password }}</small>
+          }
+        </div>
+        <button type="submit" [disabled]="isLoading()" class="btn-primary">
+          {{ isLoading() ? 'Saving...' : 'Register' }}
+        </button>
+      </form>
+      <button type="button" class="link" (click)="showLogin()">Back to sign in</button>
+    } @else {
+    <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
       <div class="form-group">
-        <label for="email">Email Address</label>
-        <input id="email" type="email" [(ngModel)]="email" name="email" required />
+        <label for="email">Email or employee ID</label>
+        <input id="email" type="text" formControlName="email" placeholder="admin@edmrs.com or EMP001" autocomplete="username" />
+        @if (loginForm.controls.email.invalid && loginForm.controls.email.touched) {
+          <small class="err-text">Email or employee ID is needed</small>
+        }
       </div>
 
       <div class="form-group">
         <label for="password">Password</label>
-        <input id="password" type="password" [(ngModel)]="password" name="password" required />
+        <input id="password" type="password" formControlName="password" placeholder="••••••••" autocomplete="current-password" />
+        @if (loginForm.controls.password.invalid && loginForm.controls.password.touched) {
+          <small class="err-text">Password must be at least 6 characters</small>
+        }
       </div>
 
-      <button type="submit" class="btn-primary" [disabled]="isLoading()">
+      <button type="submit" [disabled]="loginForm.invalid || isLoading()" class="btn-primary">
         {{ isLoading() ? 'Authenticating...' : 'Sign In' }}
       </button>
     </form>
+    <button type="button" class="link" (click)="showRegister()">Register</button>
+    }
   </div>
-</div> -->
-
-
-<div class="login-page">
-
-  <div class="login-card">
-
-    <!-- Purple background -->
-    <div class="purple-bg">
-      <div class="shape shape-1"></div>
-      <div class="shape shape-2"></div>
-      <div class="shape shape-3"></div>
-    </div>
-
-    <div>
-      
-    </div>
-    <!-- White curved section -->
-    <div class="white-section"></div>
-
-    <!-- Login form -->
-    <div class="login-form">
-
-      <div class="form-group">
-         <label for="email">Email Address</label>
-        <input id="email" type="email" [(ngModel)]="email" name="email" required />
-        <label for="email">Email</label>
-      </div>
-
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input id="password" type="password" [(ngModel)]="password" name="password" required />
-      </div>
-
-      <button class="login-btn" (click)="onLogin()">
-        LOGIN NOW
-      </button>
-<!-- 
-      <button class="register-btn" (click)="register()">
-        REGISTER NEW USER
-      </button> -->
-
-    </div>
-
-  </div>
-
 </div>
-    <div class="login-wrapper">
-      <div class="login-card">
-        <h2>EDMRS System Login</h2>
-        <p class="subtitle">Enter your credentials to access your dashboard</p>
-
-        <div *ngIf="errorMessage()" class="alert-error">
-          {{ errorMessage() }}
-        </div>
-
-        <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
-          <div class="form-group">
-            <label>Email Address</label>
-            <input type="email" formControlName="email" placeholder="user@edmrs.com" />
-            <small *ngIf="email?.invalid && email?.touched" class="err-text">Valid email is required</small>
-          </div>
-
-          <div class="form-group">
-            <label>Password</label>
-            <input type="password" formControlName="password" placeholder="••••••••" />
-            <small *ngIf="password?.invalid && password?.touched" class="err-text">Password is required</small>
-          </div>
-
-          <button type="submit" [disabled]="loginForm.invalid || isLoading()" class="btn-primary">
-            {{ isLoading() ? 'Authenticating...' : 'Sign In' }}
-          </button>
-        </form>
-      </div>
-    </div>

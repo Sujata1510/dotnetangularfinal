@@ -1,0 +1,21 @@
+<div class="workspace">
+  <aside class="sidebar">
+    <div class="brand">EDMRS</div>
+    <nav>
+      <span class="nav-label">Insights</span>
+      <a class="nav-item active">{{ section() }}</a>
+      <a class="nav-item muted">{{ roleLabel() }}</a>
+    </nav>
+    <button type="button" class="logout" (click)="auth.logout()">Log out</button>
+  </aside>
+
+  <div class="canvas">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">{{ roleLabel() }} workspace</p>
+        <h1>{{ auth.currentUser()?.fullName || auth.currentUser()?.email }}</h1>
+      </div>
+    </header>
+    <ng-content />
+  </div>
+</div>

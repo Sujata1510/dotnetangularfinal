@@ -1,0 +1,79 @@
+@if (error()) {
+  <p class="banner">{{ error() }}</p>
+}
+
+<section class="board">
+  <div class="board-head">
+    <h2>Cross-functional project plan</h2>
+    <div class="tabs"><span class="tab active">List</span><span class="tab">Overview</span></div>
+  </div>
+
+  <div class="columns">
+    <span>Task name</span>
+    <span>Assignee</span>
+    <span>Due date</span>
+    <span>Status</span>
+  </div>
+
+  @if (loading()) {
+    <p class="empty">Loading projects...</p>
+  } @else if (projects().length === 0) {
+    <p class="empty">No projects are available for this role.</p>
+  } @else {
+    @for (bucket of buckets; track bucket.id) {
+      <h3 class="section-title"><i [class]="bucket.id"></i>{{ bucket.label }}</h3>
+      @for (project of projectsIn(bucket.id); track project.projectID) {
+        <button
+          type="button"
+          class="row"
+          [class.selected]="project.projectID === selectedId()"
+          (click)="selected.emit(project.projectID)"
+        >
+          <span class="name">{{ project.projectName }}</span>
+          <span>{{ project.clientName || 'Unassigned' }}</span>
+          <span>{{ project.endDate ? (project.endDate | date: 'MMM d') : '—' }}</span>
+          <span class="pill" [class]="tone(project.status)">{{ project.status }}</span>
+        </button>
+      } @empty {
+        <p class="empty">Nothing in {{ bucket.label.toLowerCase() }}.</p>
+      }
+    }
+  }
+</section>
+
+@if (selectedProject(); as project) {
+  <section class="portfolio">
+    <h2>Portfolio Information</h2>
+    <p>Project Name : {{ project.projectName }}</p>
+    <p>Category : {{ project.departmentName || 'General' }}</p>
+    <p>Client : {{ project.clientName }}</p>
+    @if (showBudget()) {
+      <p>Budget : {{ project.budget | number: '1.0-0' }}</p>
+    }
+
+    <h3>Team on this project</h3>
+    @if (assignments().length === 0) {
+      <p class="empty">No employee assignments for this project.</p>
+    } @else {
+      <div class="columns team">
+        <span>Name</span>
+        <span>Role</span>
+        <span>Allocation</span>
+        <span>Through</span>
+      </div>
+      @for (person of assignments(); track person.employeeID) {
+        <div class="row static">
+          <span class="name">
+            {{ person.employeeName }}
+            @if (showAssigneeCode()) {
+              <small>{{ person.employeeCode }}</small>
+            }
+          </span>
+          <span>{{ person.role }}</span>
+          <span>{{ person.allocationPercentage }}%</span>
+          <span>{{ person.endDate ? (person.endDate | date: 'MMM d') : 'Open' }}</span>
+        </div>
+      }
+    }
+  </section>
+}

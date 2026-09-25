@@ -23,7 +23,7 @@ export interface AdminMetrics {
 })
 export class AdminService {
   private http = inject(HttpClient);
-  private readonly apiUrl = 'https://localhost:7001/api/admin';
+  private readonly apiUrl = 'http://localhost:5000/api/admin';
 
   getMetrics(): Observable<AdminMetrics> {
     return this.http.get<AdminMetrics>(`${this.apiUrl}/metrics`);
